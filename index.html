@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASMB</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { border: 1px solid black; margin: 10px auto; display: block; }
+        .controls { margin: 10px; }
+        input { width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>Image</h1>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <div class="controls">
+        <label>Grayscale: <span id="grayscaleValue">0</span></label>
+        <input id="grayscale" type="range" min="0" max="1" step="0.1" value="0">
+        <br>
+        <label>Sepia: <span id="sepiaValue">0</span></label>
+        <input id="sepia" type="range" min="0" max="1" step="0.1" value="0">
+        
+        <br><br>
+        <button id="resetButton">Reset</button>
+    </div>
+    <script src="wasm_exec.js"></script>
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const grayscaleSlider = document.getElementById("grayscale");
+        const sepiaSlider = document.getElementById("sepia");
+        const resetButton = document.getElementById("resetButton");
+
+        let originalImage = null;
+
+        // Load WebAssembly
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+            loadImage();
+        });
+
+        function loadImage() {
+            const img = new Image();
+            img.src = "1.jpg";
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            };
+        }
+
+        function applyGrayscaleEffect() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            applyGrayscale(imageData.data, parseFloat(grayscaleSlider.value));
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function applySepiaEffect() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            applySepia(imageData.data, parseFloat(sepiaSlider.value));
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        
+
+        function resetCanvas() {
+            if (originalImage) {
+                ctx.putImageData(originalImage, 0, 0);
+            }
+
+            grayscaleSlider.value = 0;
+            sepiaSlider.value = 0;
+
+
+            document.getElementById("grayscaleValue").innerText = "0";
+            document.getElementById("sepiaValue").innerText = "0";
+        }
+
+        grayscaleSlider.addEventListener("input", () => {
+            document.getElementById("grayscaleValue").innerText = grayscaleSlider.value;
+            applyGrayscaleEffect();
+        });
+
+        sepiaSlider.addEventListener("input", () => {
+            document.getElementById("sepiaValue").innerText = sepiaSlider.value;
+            applySepiaEffect();
+        });
+
+
+        resetButton.addEventListener("click", resetCanvas);
+    </script>
+</body>
+</html>
